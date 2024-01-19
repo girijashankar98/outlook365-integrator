@@ -1,0 +1,70 @@
+server:
+  port: 8005
+  servlet:
+    context-path: /office365
+  ssl:
+    key-store-type: PKCS12
+    key-store: classpath:springboot.p12
+    key-store-password: password
+    key-alias: springboot
+    enabled: true
+
+spring:
+  config:
+    activate:
+      on-profile:
+        - default
+  data:
+    mongodb:
+      host: localhost
+      port: 27019
+      database: spring-app
+
+  security:
+    oauth2:
+      client:
+        registration:
+          azure:
+            client-id: your-client-id
+            client-secret: your-client-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: https://your-server-url/office365/login/oauth2/code/
+            scope: user.read,mail.read,mail.send,offline_access,Mail.ReadWrite
+        provider:
+          azure:
+            authorization-uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
+            user-info-uri: https://graph.microsoft.com/oidc/userinfo
+            user-name-attribute: name
+
+  cloud:
+    function:
+      definition: NgDeskReceivedMessageProducer;NgDeskResponseMessageConsumer
+    stream:
+      bindings:
+        NgDeskReceivedMessageProducer-in-0:
+          destination: NgDeskReceivedMessageProducer
+          group: ReceivedMessageGroup
+          consumer:
+            enable-auto-commit: true
+            auto-offset-reset: latest
+            max-attempts: 5
+        NgDeskReceivedMessageProducer-out-0:
+          destination: NgDeskReceivedMessageConsumer
+          group: ReceivedMessageGroup
+        NgDeskResponseMessageConsumer-in-0:
+          destination: NgDeskResponseMessageConsumer
+          group: ResponseMessageGroup
+
+      kafka:
+        binder:
+          brokers: localhost
+          zkNodes: localhost
+redirect-url:
+  success: success-redirect-url
+  error: error-redirect-url
+
+outlook:
+    api:
+      fetch-mails: https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?
+      post-mails: https://graph.microsoft.com/v1.0/me/messages/emailId/reply
